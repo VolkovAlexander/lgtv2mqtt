@@ -65,6 +65,11 @@ mqtt.on('message', (topic, payload) => {
                 case 'youtube':
                     lgtv.request('ssap://system.launcher/launch', {id: 'youtube.leanback.v4', contentId: String(payload)});
                     break;
+                case 'channel':
+                    var res = lgtv.request('tv/getChannelList');
+                    log.debug('channelsList', res);
+                    //lgtv.request('ssap://system.launcher/launch', {id: 'youtube.leanback.v4', contentId: String(payload)});
+                    break;
                 default:
                     lgtv.request('ssap://' + topic.replace(config.name + '/set/', ''), payload || null);
             }
@@ -87,7 +92,7 @@ lgtv.on('connect', () => {
     lgtv.subscribe('ssap://audio/getVolume', (err, res) => {
         log.debug('audio/getVolume', err, res);
         if (res.changed.indexOf('volume') !== -1) {
-            mqtt.publish(config.name + '/system/state/volume', String(res.volume), {retain: true});
+            mqtt.publish(config.name + '/state/volume', String(res.volume), {retain: true});
         }
     });
 
@@ -101,7 +106,7 @@ lgtv.on('connect', () => {
                             log.error(err);
                             return;
                         }
-                        mqtt.publish(config.name + '/system/state/channel', String(res.channelNumber), {retain: true});
+                        mqtt.publish(config.name + '/state/channel', String(res.channelNumber), {retain: true});
                     });
                 }, 2500);
             }
