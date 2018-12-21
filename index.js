@@ -12,7 +12,6 @@ let lastError;
 
 log.setLevel(config.verbosity);
 
-log.info(pkg.name + ' ' + pkg.version + ' starting');
 log.info('mqtt trying to connect', config.url);
 
 const mqtt = Mqtt.connect(config.url, {will: {topic: config.name + '/connected', payload: '0', retain: true}});
@@ -63,56 +62,9 @@ mqtt.on('message', (topic, payload) => {
                 case 'volume':
                     lgtv.request('ssap://audio/setVolume', {volume: parseInt(payload, 10)} || 0);
                     break;
-                case 'mute':
-                    if (payload === 'true') {
-                        payload = true;
-                    }
-                    if (payload === 'false') {
-                        payload = false;
-                    }
-                    lgtv.request('ssap://audio/setMute', {mute: Boolean(payload)});
-                    break;
-                case 'launch':
-                    lgtv.request('ssap://system.launcher/launch', {id: String(payload)});
-                    break;
-
                 case 'youtube':
                     lgtv.request('ssap://system.launcher/launch', {id: 'youtube.leanback.v4', contentId: String(payload)});
                     break;
-
-                case 'move':
-                case 'drag':
-                    // The event type is 'move' for both moves and drags.
-                    sendPointerEvent('move', {
-                        dx: payload.dx,
-                        dy: payload.dy,
-                        drag: parts[2] === 'drag' ? 1 : 0
-                    });
-                    break;
-
-                case 'scroll':
-                    sendPointerEvent('scroll', {
-                        dx: payload.dx,
-                        dy: payload.dy
-                    });
-                    break;
-
-                case 'click':
-                    sendPointerEvent('click');
-                    break;
-
-                case 'button':
-                    /*
-                     * Buttons that are known to work:
-                     *    MUTE, RED, GREEN, YELLOW, BLUE, HOME, MENU, VOLUMEUP, VOLUMEDOWN,
-                     *    CC, BACK, UP, DOWN, LEFT, ENTER, DASH, 0-9, EXIT
-                     *
-                     * Probably also (but I don't have the facility to test them):
-                     *    CHANNELUP, CHANNELDOWN
-                     */
-                    sendPointerEvent('button', {name: (String(payload)).toUpperCase()});
-                    break;
-
                 default:
                     lgtv.request('ssap://' + topic.replace(config.name + '/set/', ''), payload || null);
             }
@@ -135,17 +87,11 @@ lgtv.on('connect', () => {
     lgtv.subscribe('ssap://audio/getVolume', (err, res) => {
         log.debug('audio/getVolume', err, res);
         if (res.changed.indexOf('volume') !== -1) {
-            mqtt.publish(config.name + '/status/volume', String(res.volume), {retain: true});
-        }
-        if (res.changed.indexOf('muted') !== -1) {
-            mqtt.publish(config.name + '/status/mute', res.muted ? '1' : '0', {retain: true});
+            mqtt.publish(config.name + '/system/state/volume', String(res.volume), {retain: true});
         }
     });
 
     lgtv.subscribe('ssap://com.webos.applicationManager/getForegroundAppInfo', (err, res) => {
-        log.debug('getForegroundAppInfo', err, res);
-        mqtt.publish(config.name + '/status/foregroundApp', String(res.appId), {retain: true});
-
         if (res.appId === 'com.webos.app.livetv') {
             if (!channelsSubscribed) {
                 channelsSubscribed = true;
@@ -155,11 +101,7 @@ lgtv.on('connect', () => {
                             log.error(err);
                             return;
                         }
-                        const msg = {
-                            val: res.channelNumber,
-                            lgtv: res
-                        };
-                        mqtt.publish(config.name + '/status/currentChannel', JSON.stringify(msg), {retain: true});
+                        mqtt.publish(config.name + '/system/state/channel', String(res.channelNumber), {retain: true});
                     });
                 }, 2500);
             }
