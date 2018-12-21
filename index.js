@@ -169,9 +169,7 @@ mqtt.on('message', (topic, payload) => {
                     lgtv.request('ssap://system.launcher/launch', {id: 'youtube.leanback.v4', contentId: String(payload)});
                     break;
                 case 'channel':
-                    setTimeout(() => {
-                        lgtv.request('ssap://tv/openChannel', {channelId: channelsToIds[payload]});
-                    }, 5000);
+                    lgtv.request('ssap://tv/openChannel', {channelId: channelsToIds[payload]});
                     break;
                 default:
                     lgtv.request('ssap://' + topic.replace(config.name + '/set/', ''), payload || null);
